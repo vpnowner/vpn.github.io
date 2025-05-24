@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>亗 𝗖𝗥𝗔𝗖𝗞𝗘𝗥 𝗩 𝗣 𝗡 亗</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: url('https://img.eselt.de/img/17621587_zm0hbxStuiPFLR5i/ad.jpg') no-repeat center center fixed;
+      background-size: cover;
+      color: #fff;
+    }
+    .container {
+      max-width: 700px;
+      margin: 30px auto;
+      padding: 20px;
+    }
+    .glass-box {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(15px);
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 20px rgba(255,192,203,0.3);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .title {
+      text-align: center;
+      font-size: 30px;
+      font-weight: bold;
+      color: deeppink;
+      margin-bottom: 10px;
+    }
+    .info {
+      text-align: center;
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+    .highlight {
+      font-weight: bold;
+      color: #fff;
+    }
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .dash-item {
+      background: rgba(255,255,255,0.2);
+      padding: 10px;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: inset 0 0 5px rgba(255,255,255,0.3);
+    }
+    .dash-item span {
+      display: block;
+      font-size: 18px;
+      font-weight: bold;
+      color: #fff;
+    }
+    .history h3 {
+      color: deeppink;
+      margin-bottom: 10px;
+    }
+    .history-item {
+      padding: 10px;
+      border-left: 5px solid gray;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      background: rgba(255,255,255,0.1);
+    }
+    .win { border-color: green; }
+    .loss { border-color: red; }
+    .pending { border-color: orange; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="glass-box">
+      <div class="title">亗 𝗖𝗥𝗔𝗖𝗞𝗘𝗥 𝗩 𝗣 𝗡 亗</div>
+      <div class="info">🗓️ Period: <span id="period" class="highlight">-</span> | Prediction: <span id="prediction" class="highlight">-</span></div>
+      <div class="info">💥 Opposite: <span id="opposite" class="highlight">-</span> | Result: <span id="result" class="highlight">-</span></div>
+    </div>
+
+    <div class="glass-box">
+      <div class="title" style="font-size: 22px;">Analysis Dashboard</div>
+      <div class="dashboard">
+        <div class="dash-item">
+          <div>Wins</div>
+          <span id="wins">0</span>
+        </div>
+        <div class="dash-item">
+          <div>Losses</div>
+          <span id="losses">0</span>
+        </div>
+        <div class="dash-item">
+          <div>Accuracy</div>
+          <span id="accuracy">0%</span>
+        </div>
+        <div class="dash-item">
+          <div>Status</div>
+          <span style="color: lightgreen">LIVE</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass-box history">
+      <h3>History</h3>
+      <div id="historyList"></div>
+    </div>
+
+  </div>  
+  <script>
+    const smallNums = [5.8, 6.9, 7.5, 8.6, 9.7];
+    const bigNums = [0.4, 1.3, 2.4, 3.0, 4.1];
+    let historyData = [], wins = 0, losses = 0, lastPeriod = null;
+
+    async function fetchResult() {
+      try {
+        let res = await fetch("https://api.bdg88zf.com/api/webapi/GetNoaverageEmerdList", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            pageSize: 10, pageNo: 1, typeId: 1, language: 0,
+            random: "4a0522c6ecd8410496260e686be2a57c",
+            signature: "334B5E70A0C9B8918B0B15E517E2069C",
+            timestamp: Math.floor(Date.now() / 1000)
+          })
+        });
+        let data = await res.json();
+        return data?.data?.list?.[0] || null;
+      } catch (e) {
+        console.error(e);
+        return null;
+      }
+    }
+
+    function logic() {
+      const d = Array.from({length: 3}, () => Math.floor(Math.random()*10));
+      return d.filter(x => x >= 5).length > 1 ? "BIG" : "SMALL";
+    }
+
+    function getOpp(pred) {
+      const list = pred === "BIG" ? bigNums : smallNums;
+      return list[Math.floor(Math.random()*list.length)];
+    }
+
+    async function updateUI() {
+      const result = await fetchResult();
+      if (!result || result.issueNumber === lastPeriod) return;
+
+      lastPeriod = result.issueNumber;
+      const period = (BigInt(result.issueNumber) + 1n).toString();
+      const prediction = logic();
+      const opposite = getOpp(prediction);
+
+      let past = historyData[0];
+      if (past && past.status === 'PENDING') {
+        const actual = parseFloat(result.number);
+        const realSize = actual >= 5 ? "BIG" : "SMALL";
+        
+        // **Updated Win Condition**: If prediction or opposite number matches actual result, win
+        const win = past.pred === realSize || past.opp.toFixed(1) === actual.toFixed(1);
+        
+        past.result = actual;
+        past.status = win ? 'WIN' : 'LOSS';
+        win ? wins++ : losses++;
+      }
+
+      document.getElementById("period").innerText = period;
+      document.getElementById("prediction").innerText = prediction;
+      document.getElementById("opposite").innerText = opposite;
+      document.getElementById("result").innerText = '-';
+
+      historyData.unshift({ period, pred: prediction, opp: opposite, result: '-', status: 'PENDING' });
+
+      const acc = ((wins / (wins + losses)) * 100).toFixed(2);
+      document.getElementById("wins").innerText = wins;
+      document.getElementById("losses").innerText = losses;
+      document.getElementById("accuracy").innerText = isNaN(acc) ? '0%' : acc + '%';
+
+      const historyHTML = historyData.slice(0, 10).map(h => `
+        <div class="history-item ${h.status.toLowerCase()}">
+          Period: ${h.period} | Prediction: ${h.pred} | Opposite: ${h.opp} | Result: ${h.result} | Status: ${h.status}
+        </div>`).join('');
+
+      document.getElementById("historyList").innerHTML = historyHTML;
+    }
+
+    setInterval(updateUI, 4000);
+  </script>
+</body>
+</html>
